@@ -20,7 +20,7 @@ impl<Stream: Read + Write + Debug, R: Resolver<Stream>> Client<Stream, R> {
 
     pub fn get(url_str: &str) -> Result<http::Response<Body<Stream>>, HttpError> {
         let mut client: Self = Client::new(&url_str)?;
-        let mut req = http::Request::get(url_str).body(&b""[..]).unwrap();
+        let req = http::Request::get(url_str).body(&b""[..]).unwrap();
         client.send(req)?;
         let response = client.receive()?;
         Ok(response)
@@ -86,12 +86,11 @@ impl<Stream: Read + Write + Debug, R: Resolver<Stream>> Client<Stream, R> {
     fn receive(&mut self) -> Result<http::Response<Body<Stream>>, HttpError> {
         let mut response = http::Response::builder();
         let mut stream = BufReader::new(self.stream.take().unwrap());
-        let mut index = 0usize;
-        let mut at_eof = false;
+        let mut at_eof;
 
         loop {
             let data = stream.fill_buf()?;
-            let at_eof = data.len() == 0;
+            at_eof = data.len() == 0;
 
             let mut headers = [httparse::EMPTY_HEADER; 30];
             let mut res = httparse::Response::new(&mut headers);
@@ -126,9 +125,9 @@ impl<Stream: Read + Write + Debug, R: Resolver<Stream>> Client<Stream, R> {
             }
 
             if let Some(v) = headers.get(http::header::TRANSFER_ENCODING) {
-                let mut elements = v.to_str().unwrap().split(',');
+                let elements = v.to_str().unwrap().split(',');
 
-                for mut element in elements {
+                for element in elements {
                     let s = element.trim().to_lowercase();
                     if &s == "chunked" {
                         length = Length::Chunked(0);
@@ -209,7 +208,7 @@ impl<Stream: Read + Debug> Read for Body<Stream> {
 
                     let (parsed, chunk_size) = loop {
                         match httparse::parse_chunk_size(self.stream.buffer()) {
-                            Err(invalid_chunk_size) => {
+                            Err(_invalid_chunk_size) => {
                                 return Err(io::Error::new(
                                     io::ErrorKind::Other,
                                     "invalid chunk size",
@@ -366,7 +365,7 @@ mod tests {
 
         println!("got response:\n{:?}", res);
 
-        let mut body = res.body_mut();
+        let body = res.body_mut();
         let mut s = String::new();
         body.read_to_string(&mut s).unwrap();
         println!("body:\n{}", s);
