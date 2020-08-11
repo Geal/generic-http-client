@@ -2,6 +2,9 @@ use std::fmt::Debug;
 use std::io::{self, BufRead, BufReader, BufWriter, Read, Write};
 use std::marker::PhantomData;
 
+pub mod error;
+use error::*;
+
 pub struct Client<Stream: Read + Write, R: Resolver<Stream>> {
     //resolver: R,
     stream: Option<Stream>,
@@ -277,45 +280,6 @@ impl HasLength for &[u8] {
     fn has_length(&self) -> Option<usize> {
         Some(self.len())
     }
-}
-
-#[derive(Debug)]
-pub enum HttpError {
-    Resolver(ResolverError),
-    Url(url::ParseError),
-    Io(io::Error),
-    Parser(httparse::Error),
-    Http(http::Error),
-}
-
-impl From<ResolverError> for HttpError {
-    fn from(e: ResolverError) -> Self {
-        HttpError::Resolver(e)
-    }
-}
-
-impl From<io::Error> for HttpError {
-    fn from(e: io::Error) -> Self {
-        HttpError::Io(e)
-    }
-}
-
-impl From<httparse::Error> for HttpError {
-    fn from(e: httparse::Error) -> Self {
-        HttpError::Parser(e)
-    }
-}
-
-impl From<http::Error> for HttpError {
-    fn from(e: http::Error) -> Self {
-        HttpError::Http(e)
-    }
-}
-
-#[derive(Debug)]
-pub enum ResolverError {
-    NotFound,
-    ConnectionFailed,
 }
 
 pub trait Resolver<Stream: Read + Write> {
