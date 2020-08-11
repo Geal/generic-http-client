@@ -37,5 +37,5 @@ impl From<http::Error> for HttpError {
 pub enum ResolverError {
     NotFound,
     ConnectionFailed,
+    InvalidScheme,
 }
-

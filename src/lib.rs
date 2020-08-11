@@ -2,21 +2,30 @@ use std::fmt::Debug;
 use std::io::{self, BufRead, BufReader, BufWriter, Read, Write};
 use std::marker::PhantomData;
 
-pub mod error;
 pub mod body;
+pub mod error;
+pub mod stream;
 
-use error::*;
 use body::*;
+use error::*;
+use stream::*;
 
 pub struct Client<Stream: Read + Write, R: Resolver<Stream>> {
     //resolver: R,
-    stream: Option<Stream>,
+    stream: Option<HttpStream<Stream>>,
     resolver: PhantomData<R>,
 }
 
 impl<Stream: Read + Write + Debug, R: Resolver<Stream>> Client<Stream, R> {
     pub fn new(url: &str) -> Result<Self, HttpError> {
-        let stream = Some(R::resolve(url)?);
+        let url = url::Url::parse(url).map_err(HttpError::Url)?;
+        let stream = R::resolve(url.clone())?;
+
+        let stream = Some(match url.scheme() {
+            "http" => HttpStream::plaintext(stream),
+            "https" => HttpStream::tls(stream, url.host_str().unwrap()),
+            _ => return Err(ResolverError::InvalidScheme.into()),
+        });
 
         Ok(Client {
             stream,
@@ -170,7 +179,7 @@ impl HasLength for &[u8] {
 }
 
 pub trait Resolver<Stream: Read + Write> {
-    fn resolve(url: &str) -> Result<Stream, HttpError>;
+    fn resolve(url: url::Url) -> Result<Stream, HttpError>;
 }
 
 #[cfg(test)]
@@ -182,9 +191,7 @@ mod tests {
     struct TcpStreamResolver {}
 
     impl Resolver<TcpStream> for TcpStreamResolver {
-        fn resolve(url: &str) -> Result<TcpStream, HttpError> {
-            let url = url::Url::parse(url).map_err(HttpError::Url)?;
-
+        fn resolve(url: url::Url) -> Result<TcpStream, HttpError> {
             let host = match url.port_or_known_default() {
                 Some(p) => format!("{}:{}", url.host_str().unwrap(), p),
                 None => url.host_str().unwrap().to_string(),

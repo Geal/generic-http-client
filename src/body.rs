@@ -1,9 +1,10 @@
-use std::io::{self, Read, Write, BufReader, BufRead};
+use crate::stream::HttpStream;
 use std::fmt::Debug;
+use std::io::{self, BufRead, BufReader, Read, Write};
 
 #[derive(Debug)]
-pub struct Body<Stream: Read + Debug> {
-    pub(crate) stream: BufReader<Stream>,
+pub struct Body<Stream: Read + Write + Debug> {
+    pub(crate) stream: BufReader<HttpStream<Stream>>,
     pub(crate) length: Length,
     pub(crate) at_eof: bool,
 }
@@ -17,7 +18,7 @@ pub enum Length {
     Chunked(usize),
 }
 
-impl<Stream: Read + Debug> Read for Body<Stream> {
+impl<Stream: Read + Write + Debug> Read for Body<Stream> {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
         let (length, res) = match self.length {
             Length::None => return Ok(0),
