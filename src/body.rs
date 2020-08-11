@@ -1,10 +1,11 @@
 use crate::stream::HttpStream;
+use crate::accumulator::AccReader;
 use std::fmt::Debug;
 use std::io::{self, BufRead, BufReader, Read, Write};
 
 #[derive(Debug)]
 pub struct Body<Stream: Read + Write + Debug> {
-    pub(crate) stream: BufReader<HttpStream<Stream>>,
+    pub(crate) stream: AccReader<HttpStream<Stream>>,
     pub(crate) length: Length,
     pub(crate) at_eof: bool,
 }

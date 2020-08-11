@@ -1,10 +1,11 @@
 use std::fmt::Debug;
-use std::io::{self, BufRead, BufReader, BufWriter, Read, Write};
+use std::io::{BufRead, BufReader, BufWriter, Read, Write};
 use std::marker::PhantomData;
 
 pub mod body;
 pub mod error;
 pub mod stream;
+mod accumulator;
 
 use body::*;
 use error::*;
@@ -100,7 +101,7 @@ impl<Stream: Read + Write + Debug, R: Resolver<Stream>> Client<Stream, R> {
 
     fn receive(&mut self) -> Result<http::Response<Body<Stream>>, HttpError> {
         let mut response = http::Response::builder();
-        let mut stream = BufReader::new(self.stream.take().unwrap());
+        let mut stream = accumulator::AccReader::with_capacity(16384, self.stream.take().unwrap());
         let mut at_eof;
 
         loop {
