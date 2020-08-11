@@ -36,7 +36,12 @@ impl<Stream: Read + Write + Debug, R: Resolver<Stream>> Client<Stream, R> {
 
     pub fn get(url_str: &str) -> Result<http::Response<Body<Stream>>, HttpError> {
         let mut client: Self = Client::new(&url_str)?;
-        let req = http::Request::get(url_str).body(&b""[..]).unwrap();
+        let mut req: http::Request::<&'static [u8]> = http::Request::default();
+        *req.method_mut() = http::Method::GET;
+        let url = url::Url::parse(url_str).map_err(HttpError::Url)?;
+        req.headers_mut().insert(http::header::HOST, http::header::HeaderValue::from_str(url.host_str().unwrap()).unwrap());
+        *req.uri_mut() = url[url::Position::BeforePath..].parse().unwrap();
+
         client.send(req)?;
         let response = client.receive()?;
         Ok(response)
