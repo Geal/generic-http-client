@@ -95,12 +95,43 @@ impl<Stream: Read + Write + Debug> Read for Body<Stream> {
                     return Ok(0);
                 }
 
-                let bound = std::cmp::min(sz, buf.len());
-                // leaving two bytes to check for \r\n
-                let internal_bound = std::cmp::min(bound, self.stream.buffer().len() - 2);
-                let written = (&mut buf[..bound]).write(&self.stream.buffer()[..internal_bound])?;
-                self.stream.consume(written);
-                if sz == written {
+                let mut index = 0usize;
+                loop {
+                    let bound = std::cmp::min(sz - index, (&buf[index..]).len());
+                    if bound == 0 {
+                        break;
+                    }
+
+                    if bound > self.stream.buffer().len() {
+                        //println!("refilling (bound = {}, buffer len: {}, internal buffer len = {})",
+                        //bound, buf.len(),
+                        //self.stream.buffer().len());
+                        if self.at_eof {
+                            return Ok(0);
+                        }
+
+                        let data = self.stream.fill_buf()?;
+
+                        if data.is_empty() {
+                            self.at_eof = true;
+                            return Ok(0);
+                        } else {
+                            //println!("added {} more bytes", data.len());
+                        }
+                    }
+
+                    // leaving two bytes to check for \r\n
+                    let internal_bound = std::cmp::min(bound, self.stream.buffer().len());
+                    //println!("remaining chunk size: {}, buffer len: {}, internal buffer len: {}, bound: {}, internal bound: {}", sz - index, buf.len(), self.stream.buffer().len(), bound, internal_bound);
+
+                    let written = (&mut buf[index..index + bound])
+                        .write(&self.stream.buffer()[..internal_bound])?;
+                    //println!("wrote:{:?}", std::str::from_utf8(&self.stream.buffer()[..written]));
+                    self.stream.consume(written);
+                    index += written;
+                }
+
+                if sz == index {
                     if &self.stream.buffer()[..2] == &b"\r\n"[..] {
                         self.stream.consume(2);
                     } else {
@@ -108,7 +139,9 @@ impl<Stream: Read + Write + Debug> Read for Body<Stream> {
                     }
                 }
 
-                (Length::ContentLength(sz - written), Ok(written))
+                println!(" ==> read {} bytes of chunk", index);
+
+                (Length::Chunked(sz - index), Ok(index))
             }
         };
 
