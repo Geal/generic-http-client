@@ -175,15 +175,9 @@ impl<Stream: Read + Write + Debug, R: Resolver<Stream>> Client<Stream, R> {
                 }
             }
 
-            if let Some(v) = headers.get(http::header::TRANSFER_ENCODING) {
-                let elements = v.to_str().unwrap().split(',');
-
-                for element in elements {
-                    let s = element.trim().to_lowercase();
-                    if &s == "chunked" {
-                        length = Length::Chunked(0);
-                    }
-                }
+            if headers.get_all(http::header::TRANSFER_ENCODING).iter()
+                .find(|c| util::eq_no_case(c.as_bytes(), "chunked".as_bytes())).is_some() {
+                length = Length::Chunked(0);
             }
         }
 
