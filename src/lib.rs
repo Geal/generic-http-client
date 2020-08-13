@@ -1,11 +1,12 @@
 use std::fmt::Debug;
-use std::io::{BufRead, BufReader, BufWriter, Read, Write};
+use std::io::{BufRead, BufWriter, Read, Write};
 use std::marker::PhantomData;
 
 pub mod body;
 pub mod error;
 pub mod stream;
 mod accumulator;
+mod util;
 
 use body::*;
 use error::*;
