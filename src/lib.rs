@@ -42,12 +42,19 @@ impl<Stream: Read + Write + Debug, R: Resolver<Stream>> Client<Stream, R> {
         req.headers_mut().insert(http::header::HOST, http::header::HeaderValue::from_str(url.host_str().unwrap()).unwrap());
         *req.uri_mut() = url[url::Position::BeforePath..].parse().unwrap();
 
-        client.send(req)?;
-        let response = client.receive()?;
-        Ok(response)
+        client.request(req)
     }
 
-    pub fn send<T: BufRead + HasLength>(
+    pub fn request<T: BufRead + HasLength + Debug>(
+        &mut self,
+        req: http::Request<T>,
+        ) -> Result<http::Response<Body<Stream>>, HttpError> {
+        // FIXME: handle 101 responses, redirections, etc
+        self.send(req)?;
+        self.receive()
+    }
+
+    pub fn send<T: BufRead + HasLength + Debug>(
         &mut self,
         mut req: http::Request<T>,
     ) -> Result<(), HttpError> {
