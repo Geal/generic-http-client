@@ -14,7 +14,7 @@ use std::iter;
 
 #[derive(Debug)]
 pub struct AccReader<R> {
-    inner: R,
+    pub inner: R,
     buf: Vec<u8>,
     pos: usize,
     cap: usize,

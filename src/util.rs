@@ -1,5 +1,4 @@
-
-fn eq_no_case(a: &[u8], b: &[u8]) -> bool {
+pub fn eq_no_case(a: &[u8], b: &[u8]) -> bool {
     if a.len() != b.len() {
         return false;
     }

@@ -33,6 +33,12 @@ impl From<http::Error> for HttpError {
     }
 }
 
+impl From<url::ParseError> for HttpError {
+    fn from(e: url::ParseError) -> Self {
+        HttpError::Url(e)
+    }
+}
+
 #[derive(Debug)]
 pub enum ResolverError {
     NotFound,

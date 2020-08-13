@@ -1,6 +1,8 @@
 use std::fmt::Debug;
 use std::io::{BufRead, BufWriter, Read, Write};
 use std::marker::PhantomData;
+use http::StatusCode;
+use url::{Url, Position};
 
 mod accumulator;
 pub mod body;
@@ -16,6 +18,7 @@ pub struct Client<Stream: Read + Write, R: Resolver<Stream>> {
     //resolver: R,
     stream: Option<HttpStream<Stream>>,
     resolver: PhantomData<R>,
+    url: url::Url,
 }
 
 impl<Stream: Read + Write + Debug, R: Resolver<Stream>> Client<Stream, R> {
@@ -32,6 +35,7 @@ impl<Stream: Read + Write + Debug, R: Resolver<Stream>> Client<Stream, R> {
         Ok(Client {
             stream,
             resolver: PhantomData,
+            url,
         })
     }
 
@@ -49,7 +53,7 @@ impl<Stream: Read + Write + Debug, R: Resolver<Stream>> Client<Stream, R> {
         client.request(req)
     }
 
-    pub fn post<T: BufRead + HasLength + Debug>(
+    pub fn post<T: BufRead + HasLength + Debug + Clone>(
         url_str: &str,
         body: T,
     ) -> Result<http::Response<Body<Stream>>, HttpError> {
@@ -68,18 +72,59 @@ impl<Stream: Read + Write + Debug, R: Resolver<Stream>> Client<Stream, R> {
         client.request(req)
     }
 
-    pub fn request<T: BufRead + HasLength + Debug>(
-        &mut self,
-        req: http::Request<T>,
-    ) -> Result<http::Response<Body<Stream>>, HttpError> {
-        // FIXME: handle 101 responses, redirections, etc
-        self.send(req)?;
-        self.receive()
-    }
-
-    pub fn send<T: BufRead + HasLength + Debug>(
+    pub fn request<T: BufRead + HasLength + Debug + Clone>(
         &mut self,
         mut req: http::Request<T>,
+    ) -> Result<http::Response<Body<Stream>>, HttpError> {
+        self.send(&req)?;
+        let res = self.receive()?;
+
+        match res.status() {
+            StatusCode::MOVED_PERMANENTLY | StatusCode::FOUND |
+                StatusCode::TEMPORARY_REDIRECT | StatusCode::PERMANENT_REDIRECT => {
+                    if let Some(location) = res.headers().get(http::header::LOCATION).cloned() {
+                        let url_str = location.to_str().unwrap();
+                        match url::Url::parse(url_str) {
+                            Ok(url) => {
+                                // same scheme and domain
+                                if &self.url[Position::BeforeScheme..Position::BeforePath] ==
+                                    &url[Position::BeforeScheme..Position::BeforePath] {
+                                        let path: String = url[url::Position::BeforePath..].parse().unwrap();
+                                        *req.uri_mut() = path.parse().unwrap();
+                                        let body = res.into_body();
+                                        self.stream = Some(body.stream.inner);
+                                        self.request(req)
+                                } else {
+                                    req.headers_mut().insert(
+                                        http::header::HOST,
+                                        http::header::HeaderValue::from_str(url.host_str().unwrap()).unwrap(),
+                                    );
+                                    let path: String = url[url::Position::BeforePath..].parse().unwrap();
+                                    *req.uri_mut() = path.parse().unwrap();
+                                    let mut client: Self = Client::new(&url_str)?;
+                                    return client.request(req);
+                                }
+                            },
+                            Err(url::ParseError::RelativeUrlWithoutBase) => {
+                                let body = res.into_body();
+                                self.stream = Some(body.stream.inner);
+                                *req.uri_mut() = url_str.parse().unwrap();
+                                self.request(req)
+                            },
+                            Err(e) => Err(e.into()),
+                        }
+                    } else {
+                        Ok(res)
+                    }
+                },
+                // FIXME handle 101, 303
+            _ => Ok(res)
+        }
+    }
+
+    pub fn send<T: BufRead + HasLength + Debug + Clone>(
+        &mut self,
+        req: &http::Request<T>,
     ) -> Result<(), HttpError> {
         let mut stream = BufWriter::new(self.stream.take().unwrap());
 
@@ -106,11 +151,12 @@ impl<Stream: Read + Write + Debug, R: Resolver<Stream>> Client<Stream, R> {
         let has_length = req.body().has_length().is_some();
         stream.write_all(&b"\r\n"[..])?;
 
+        let mut body = req.body().clone();
         if has_length {
-            std::io::copy(req.body_mut(), &mut stream)?;
+            std::io::copy(&mut body, &mut stream)?;
         } else {
             loop {
-                let data = req.body_mut().fill_buf()?;
+                let data = body.fill_buf()?;
                 if data.len() == 0 {
                     //EOF
                     stream.write_all(&b"0\r\n\r\n"[..])?;
