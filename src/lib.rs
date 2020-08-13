@@ -2,10 +2,10 @@ use std::fmt::Debug;
 use std::io::{BufRead, BufWriter, Read, Write};
 use std::marker::PhantomData;
 
+mod accumulator;
 pub mod body;
 pub mod error;
 pub mod stream;
-mod accumulator;
 mod util;
 
 use body::*;
@@ -37,11 +37,33 @@ impl<Stream: Read + Write + Debug, R: Resolver<Stream>> Client<Stream, R> {
 
     pub fn get(url_str: &str) -> Result<http::Response<Body<Stream>>, HttpError> {
         let mut client: Self = Client::new(&url_str)?;
-        let mut req: http::Request::<&'static [u8]> = http::Request::default();
+        let mut req: http::Request<&'static [u8]> = http::Request::default();
         *req.method_mut() = http::Method::GET;
         let url = url::Url::parse(url_str).map_err(HttpError::Url)?;
-        req.headers_mut().insert(http::header::HOST, http::header::HeaderValue::from_str(url.host_str().unwrap()).unwrap());
+        req.headers_mut().insert(
+            http::header::HOST,
+            http::header::HeaderValue::from_str(url.host_str().unwrap()).unwrap(),
+        );
         *req.uri_mut() = url[url::Position::BeforePath..].parse().unwrap();
+
+        client.request(req)
+    }
+
+    pub fn post<T: BufRead + HasLength + Debug>(
+        url_str: &str,
+        body: T,
+    ) -> Result<http::Response<Body<Stream>>, HttpError> {
+        let mut client: Self = Client::new(&url_str)?;
+        let mut req = http::Request::builder();
+        req = req.method(http::Method::POST);
+        let url = url::Url::parse(url_str).map_err(HttpError::Url)?;
+        req = req.header(
+            http::header::HOST,
+            http::header::HeaderValue::from_str(url.host_str().unwrap()).unwrap(),
+        );
+        let path: String = url[url::Position::BeforePath..].parse().unwrap();
+        req = req.uri(path);
+        let req = req.body(body)?;
 
         client.request(req)
     }
@@ -49,7 +71,7 @@ impl<Stream: Read + Write + Debug, R: Resolver<Stream>> Client<Stream, R> {
     pub fn request<T: BufRead + HasLength + Debug>(
         &mut self,
         req: http::Request<T>,
-        ) -> Result<http::Response<Body<Stream>>, HttpError> {
+    ) -> Result<http::Response<Body<Stream>>, HttpError> {
         // FIXME: handle 101 responses, redirections, etc
         self.send(req)?;
         self.receive()
