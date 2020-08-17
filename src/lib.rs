@@ -39,7 +39,7 @@ impl<Stream: Read + Write + Debug, R: Resolver<Stream>> Client<Stream, R> {
         })
     }
 
-    pub fn get(url_str: &str) -> Result<http::Response<Body<Stream>>, HttpError> {
+    pub fn get(url_str: &str) -> Result<http::Response<Body<HttpStream<Stream>>>, HttpError> {
         let mut client: Self = Client::new(&url_str)?;
         let mut req: http::Request<&'static [u8]> = http::Request::default();
         *req.method_mut() = http::Method::GET;
@@ -56,7 +56,7 @@ impl<Stream: Read + Write + Debug, R: Resolver<Stream>> Client<Stream, R> {
     pub fn post<T: BufRead + HasLength + Debug + Clone>(
         url_str: &str,
         body: T,
-    ) -> Result<http::Response<Body<Stream>>, HttpError> {
+    ) -> Result<http::Response<Body<HttpStream<Stream>>>, HttpError> {
         let mut client: Self = Client::new(&url_str)?;
         let mut req = http::Request::builder();
         req = req.method(http::Method::POST);
@@ -75,7 +75,7 @@ impl<Stream: Read + Write + Debug, R: Resolver<Stream>> Client<Stream, R> {
     pub fn request<T: BufRead + HasLength + Debug + Clone>(
         &mut self,
         mut req: http::Request<T>,
-    ) -> Result<http::Response<Body<Stream>>, HttpError> {
+    ) -> Result<http::Response<Body<HttpStream<Stream>>>, HttpError> {
         self.send(&req)?;
         let res = self.receive()?;
 
@@ -180,7 +180,7 @@ impl<Stream: Read + Write + Debug, R: Resolver<Stream>> Client<Stream, R> {
         Ok(())
     }
 
-    fn receive(&mut self) -> Result<http::Response<Body<Stream>>, HttpError> {
+    fn receive(&mut self) -> Result<http::Response<Body<HttpStream<Stream>>>, HttpError> {
         let mut response = http::Response::builder();
         let mut stream = accumulator::AccReader::with_capacity(16384, self.stream.take().unwrap());
         let mut at_eof;
