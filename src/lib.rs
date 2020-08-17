@@ -9,6 +9,7 @@ pub mod body;
 pub mod error;
 pub mod stream;
 mod util;
+mod server;
 
 use body::*;
 use error::*;
@@ -128,7 +129,7 @@ impl<Stream: Read + Write + Debug, R: Resolver<Stream>> Client<Stream, R> {
     ) -> Result<(), HttpError> {
         let mut stream = BufWriter::new(self.stream.take().unwrap());
 
-        // we'are assuming that the reqest line and all headers will fit into the buffer
+        // we are assuming that the request line and all headers will fit into the buffer
         write!(
             &mut stream,
             "{} {} HTTP/1.1\r\n",
