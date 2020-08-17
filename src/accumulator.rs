@@ -8,9 +8,6 @@ use std::io;
 use std::io::{Read,BufRead};
 use std::iter::{repeat,Iterator};
 use std::cmp;
-use std::iter;
-//use std::fmt;
-//use std::str;
 
 #[derive(Debug)]
 pub struct AccReader<R> {
@@ -27,7 +24,7 @@ impl<R: Read> AccReader<R> {
 
   pub fn with_capacity(cap: usize, inner: R) -> AccReader<R> {
     let mut buf = Vec::with_capacity(cap);
-    buf.extend(iter::repeat(0).take(cap));
+    buf.extend(repeat(0).take(cap));
     AccReader {
       inner,
       buf,

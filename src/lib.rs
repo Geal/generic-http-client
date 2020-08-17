@@ -1,15 +1,14 @@
-use std::fmt::Debug;
 use std::io::{BufRead, BufWriter, Read, Write};
 use std::marker::PhantomData;
 use http::StatusCode;
-use url::{Url, Position};
+use url::Position;
 
-mod accumulator;
+pub mod accumulator;
 pub mod body;
 pub mod error;
 pub mod stream;
 mod util;
-mod server;
+pub mod server;
 
 use body::*;
 use error::*;
@@ -22,7 +21,7 @@ pub struct Client<Stream: Read + Write, R: Resolver<Stream>> {
     url: url::Url,
 }
 
-impl<Stream: Read + Write + Debug, R: Resolver<Stream>> Client<Stream, R> {
+impl<Stream: Read + Write, R: Resolver<Stream>> Client<Stream, R> {
     pub fn new(url: &str) -> Result<Self, HttpError> {
         let url = url::Url::parse(url).map_err(HttpError::Url)?;
         let stream = R::resolve(url.clone())?;
@@ -54,7 +53,7 @@ impl<Stream: Read + Write + Debug, R: Resolver<Stream>> Client<Stream, R> {
         client.request(req)
     }
 
-    pub fn post<T: BufRead + HasLength + Debug + Clone>(
+    pub fn post<T: BufRead + HasLength + Clone>(
         url_str: &str,
         body: T,
     ) -> Result<http::Response<Body<HttpStream<Stream>>>, HttpError> {
@@ -73,7 +72,7 @@ impl<Stream: Read + Write + Debug, R: Resolver<Stream>> Client<Stream, R> {
         client.request(req)
     }
 
-    pub fn request<T: BufRead + HasLength + Debug + Clone>(
+    pub fn request<T: BufRead + HasLength + Clone>(
         &mut self,
         mut req: http::Request<T>,
     ) -> Result<http::Response<Body<HttpStream<Stream>>>, HttpError> {
@@ -123,7 +122,7 @@ impl<Stream: Read + Write + Debug, R: Resolver<Stream>> Client<Stream, R> {
         }
     }
 
-    pub fn send<T: BufRead + HasLength + Debug + Clone>(
+    pub fn send<T: BufRead + HasLength + Clone>(
         &mut self,
         req: &http::Request<T>,
     ) -> Result<(), HttpError> {

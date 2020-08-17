@@ -1,4 +1,3 @@
-use crate::stream::HttpStream;
 use crate::accumulator::AccReader;
 use std::fmt::Debug;
 use std::io::{self, BufRead, Read, Write};
