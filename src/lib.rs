@@ -1,3 +1,10 @@
+#[cfg(feature = "tls")]
+extern crate rustls;
+#[cfg(feature = "tls")]
+extern crate webpki;
+#[cfg(feature = "tls")]
+extern crate webpki_roots;
+
 pub mod accumulator;
 pub mod body;
 pub mod client;
