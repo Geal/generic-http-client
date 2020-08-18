@@ -1,10 +1,10 @@
 pub mod accumulator;
 pub mod body;
+pub mod client;
 pub mod error;
+pub mod server;
 pub mod stream;
 mod util;
-pub mod server;
-pub mod client;
 
 use error::*;
 
@@ -24,4 +24,3 @@ impl HasLength for &[u8] {
         Some(self.len())
     }
 }
-

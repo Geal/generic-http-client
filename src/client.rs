@@ -1,14 +1,14 @@
+use http::StatusCode;
 use std::io::{BufRead, BufWriter, Read, Write};
 use std::marker::PhantomData;
-use http::StatusCode;
 use url::Position;
 
 use crate::accumulator::AccReader;
 use crate::body::{Body, Length};
+use crate::stream::HttpStream;
 use crate::util;
 use crate::HasLength;
 use crate::{HttpError, ResolverError};
-use crate::stream::HttpStream;
 
 pub trait Resolver<Stream: Read + Write> {
     fn resolve(url: url::Url) -> Result<Stream, HttpError>;
@@ -79,45 +79,51 @@ impl<Stream: Read + Write, R: Resolver<Stream>> Client<Stream, R> {
         let res = self.receive()?;
 
         match res.status() {
-            StatusCode::MOVED_PERMANENTLY | StatusCode::FOUND |
-                StatusCode::TEMPORARY_REDIRECT | StatusCode::PERMANENT_REDIRECT => {
-                    if let Some(location) = res.headers().get(http::header::LOCATION).cloned() {
-                        let url_str = location.to_str().unwrap();
-                        match url::Url::parse(url_str) {
-                            Ok(url) => {
-                                // same scheme and domain
-                                if &self.url[Position::BeforeScheme..Position::BeforePath] ==
-                                    &url[Position::BeforeScheme..Position::BeforePath] {
-                                        let path: String = url[url::Position::BeforePath..].parse().unwrap();
-                                        *req.uri_mut() = path.parse().unwrap();
-                                        let body = res.into_body();
-                                        self.stream = Some(body.stream.inner);
-                                        self.request(req)
-                                } else {
-                                    req.headers_mut().insert(
-                                        http::header::HOST,
-                                        http::header::HeaderValue::from_str(url.host_str().unwrap()).unwrap(),
-                                    );
-                                    let path: String = url[url::Position::BeforePath..].parse().unwrap();
-                                    *req.uri_mut() = path.parse().unwrap();
-                                    let mut client: Self = Client::new(&url_str)?;
-                                    return client.request(req);
-                                }
-                            },
-                            Err(url::ParseError::RelativeUrlWithoutBase) => {
+            StatusCode::MOVED_PERMANENTLY
+            | StatusCode::FOUND
+            | StatusCode::TEMPORARY_REDIRECT
+            | StatusCode::PERMANENT_REDIRECT => {
+                if let Some(location) = res.headers().get(http::header::LOCATION).cloned() {
+                    let url_str = location.to_str().unwrap();
+                    match url::Url::parse(url_str) {
+                        Ok(url) => {
+                            // same scheme and domain
+                            if &self.url[Position::BeforeScheme..Position::BeforePath]
+                                == &url[Position::BeforeScheme..Position::BeforePath]
+                            {
+                                let path: String =
+                                    url[url::Position::BeforePath..].parse().unwrap();
+                                *req.uri_mut() = path.parse().unwrap();
                                 let body = res.into_body();
                                 self.stream = Some(body.stream.inner);
-                                *req.uri_mut() = url_str.parse().unwrap();
                                 self.request(req)
-                            },
-                            Err(e) => Err(e.into()),
+                            } else {
+                                req.headers_mut().insert(
+                                    http::header::HOST,
+                                    http::header::HeaderValue::from_str(url.host_str().unwrap())
+                                        .unwrap(),
+                                );
+                                let path: String =
+                                    url[url::Position::BeforePath..].parse().unwrap();
+                                *req.uri_mut() = path.parse().unwrap();
+                                let mut client: Self = Client::new(&url_str)?;
+                                return client.request(req);
+                            }
                         }
-                    } else {
-                        Ok(res)
+                        Err(url::ParseError::RelativeUrlWithoutBase) => {
+                            let body = res.into_body();
+                            self.stream = Some(body.stream.inner);
+                            *req.uri_mut() = url_str.parse().unwrap();
+                            self.request(req)
+                        }
+                        Err(e) => Err(e.into()),
                     }
-                },
-                // FIXME handle 101, 303
-            _ => Ok(res)
+                } else {
+                    Ok(res)
+                }
+            }
+            // FIXME handle 101, 303
+            _ => Ok(res),
         }
     }
 
@@ -220,8 +226,12 @@ impl<Stream: Read + Write, R: Resolver<Stream>> Client<Stream, R> {
                 }
             }
 
-            if headers.get_all(http::header::TRANSFER_ENCODING).iter()
-                .find(|c| util::eq_no_case(c.as_bytes(), "chunked".as_bytes())).is_some() {
+            if headers
+                .get_all(http::header::TRANSFER_ENCODING)
+                .iter()
+                .find(|c| util::eq_no_case(c.as_bytes(), "chunked".as_bytes()))
+                .is_some()
+            {
                 length = Length::Chunked(0);
             }
         }
@@ -235,7 +245,6 @@ impl<Stream: Read + Write, R: Resolver<Stream>> Client<Stream, R> {
         Ok(response.body(body)?)
     }
 }
-
 
 #[cfg(test)]
 mod tests {
