@@ -272,15 +272,15 @@ mod tests {
                 Some(p) => format!("{}:{}", url.host_str().unwrap(), p),
                 None => url.host_str().unwrap().to_string(),
             };
-            println!("resolving hostname: {}", host);
+            //println!("resolving hostname: {}", host);
             match host.to_socket_addrs() {
                 Err(e) => {
-                    println!("ToSocketAddrs error: {:?}", e);
+                    //println!("ToSocketAddrs error: {:?}", e);
                     Err(ResolverError::NotFound.into())
                 }
                 Ok(mut addr_iter) => match addr_iter.next() {
                     None => {
-                        println!("ToSocketAddrs error: no addresses returned");
+                        //println!("ToSocketAddrs error: no addresses returned");
                         Err(ResolverError::NotFound.into())
                     }
                     Some(addr) => match TcpStream::connect(addr) {

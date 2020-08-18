@@ -16,20 +16,21 @@ pub fn parse<Stream: Read + Write + Debug>(
     let mut at_eof;
 
     loop {
-        println!("loop: bufferlen == {}", stream.buffer().len());
+        //println!("loop: bufferlen == {}", stream.buffer().len());
         let data = stream.fill_buf()?;
         at_eof = data.len() == 0;
 
         let mut headers = [httparse::EMPTY_HEADER; 30];
         let mut req = httparse::Request::new(&mut headers);
 
-        println!(
+        /*println!(
             "will parse:\nraw: {:x?}\n{}",
             stream.buffer(),
             std::str::from_utf8(stream.buffer()).unwrap()
         );
+        */
         let status = req.parse(stream.buffer())?;
-        println!("parser result: {:?}\n{:?}", status, req);
+        //println!("parser result: {:?}\n{:?}", status, req);
         if status.is_partial() {
             if at_eof {
                 panic!("got partial response and EOF");
@@ -76,7 +77,7 @@ pub fn parse<Stream: Read + Write + Debug>(
         }
     }
 
-    println!("finished parsing headers:\n{:?}", request);
+    //println!("finished parsing headers:\n{:?}", request);
     let body = Body {
         stream,
         length,
@@ -94,7 +95,7 @@ pub fn respond<
     response: http::Response<T>,
 ) -> Result<Stream, HttpError> {
     let mut stream = BufWriter::new(stream);
-    println!("sending response:\n{:?}", response);
+    //println!("sending response:\n{:?}", response);
 
     // we'are assuming that the reqest line and all headers will fit into the buffer
     write!(&mut stream, "{} HTTP/1.1\r\n", response.status())?;
@@ -132,7 +133,7 @@ pub fn respond<
         }
     }
     stream.flush()?;
-    println!("finished sending response");
+    //println!("finished sending response");
 
     let stream = match stream.into_inner() {
         Ok(s) => s,

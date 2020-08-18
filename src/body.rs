@@ -139,7 +139,7 @@ impl<Stream: Read + Write + Debug> Read for Body<Stream> {
                     }
                 }
 
-                println!(" ==> read {} bytes of chunk", index);
+                //println!(" ==> read {} bytes of chunk", index);
 
                 (Length::Chunked(sz - index), Ok(index))
             }
