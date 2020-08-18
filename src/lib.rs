@@ -305,4 +305,21 @@ mod tests {
         println!("body:\n{}", s);
         panic!();
     }
+
+    #[test]
+    fn clever_cloud_tls() {
+        let mut res =
+            //Client::<TcpStream, TcpStreamResolver>::get("https://www.clever-cloud.com/en/").unwrap();
+            Client::<TcpStream, TcpStreamResolver>::get("https://www.google.com/").unwrap();
+
+        println!("got response:\n{:?}", res);
+
+        let body = res.body_mut();
+        let mut s = Vec::new();
+        body.read_to_end(&mut s).unwrap();
+
+        println!("body({} bytes):\n{}", s.len(), unsafe {
+            std::str::from_utf8_unchecked(&s[..])
+        });
+    }
 }
