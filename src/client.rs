@@ -27,6 +27,7 @@ impl<Stream: Read + Write, R: Resolver<Stream>> Client<Stream, R> {
 
         let stream = Some(match url.scheme() {
             "http" => HttpStream::plaintext(stream),
+            #[cfg(feature = "tls")]
             "https" => HttpStream::tls(stream, url.host_str().unwrap()),
             _ => return Err(ResolverError::InvalidScheme.into()),
         });
@@ -295,6 +296,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "tls")]
     fn clever_cloud_tls() {
         let mut res =
             //Client::<TcpStream, TcpStreamResolver>::get("https://www.clever-cloud.com/en/").unwrap();
