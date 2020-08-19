@@ -89,7 +89,7 @@ pub fn parse<Stream: Read + Write + Debug>(
 
 pub fn respond<
     Stream: Read + Write + Debug,
-    T: BufRead + Read + Write + HasLength + Debug + Clone,
+    T: BufRead + Read + HasLength + Debug + Clone,
 >(
     stream: Stream,
     response: http::Response<T>,
