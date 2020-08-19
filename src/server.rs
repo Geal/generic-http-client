@@ -98,7 +98,7 @@ pub fn respond<
     //println!("sending response:\n{:?}", response);
 
     // we'are assuming that the reqest line and all headers will fit into the buffer
-    write!(&mut stream, "{} HTTP/1.1\r\n", response.status())?;
+    write!(&mut stream, "HTTP/1.1 {}\r\n", response.status())?;
 
     for (name, value) in response.headers() {
         write!(&mut stream, "{}: ", name.as_str())?;
