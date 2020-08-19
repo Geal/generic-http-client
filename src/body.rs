@@ -18,6 +18,12 @@ pub enum Length {
     Chunked(usize),
 }
 
+impl<Stream: Read + Write + Debug> Body<Stream> {
+    pub fn into_inner(self) -> AccReader<Stream> {
+        self.stream
+    }
+}
+
 impl<Stream: Read + Write + Debug> Read for Body<Stream> {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
         let (length, res) = match self.length {
