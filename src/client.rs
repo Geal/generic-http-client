@@ -29,6 +29,9 @@ impl<Stream: Read + Write, R: Resolver<Stream>> Client<Stream, R> {
             "http" => HttpStream::plaintext(stream),
             #[cfg(feature = "tls")]
             "https" => HttpStream::tls(stream, url.host_str().unwrap()),
+            // we can cheat and let the resolver pass a stream that s actually in TLS?
+            #[cfg(not(feature = "tls"))]
+            "https" => HttpStream::plaintext(stream),
             _ => return Err(ResolverError::InvalidScheme.into()),
         });
 
