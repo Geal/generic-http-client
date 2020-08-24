@@ -15,7 +15,7 @@ mod util;
 
 use error::*;
 
-/// used to determie if the body can be sent as is or chunked
+/// used to determine if the body can be sent as is or chunked
 pub trait HasLength {
     fn has_length(&self) -> Option<usize>;
 }
