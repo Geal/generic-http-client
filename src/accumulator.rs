@@ -8,7 +8,7 @@ use std::io;
 use std::io::{BufRead, Read};
 use std::iter::{repeat, Iterator};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct AccReader<R> {
     pub inner: R,
     buf: Vec<u8>,
