@@ -89,7 +89,7 @@ pub fn parse<Stream: Read + Write + Debug>(
 
 pub fn respond<
     Stream: Read + Write + Debug,
-    T: BufRead + Read + HasLength + Debug + Clone,
+    T: BufRead + Read + HasLength + Debug,
 >(
     stream: Stream,
     response: http::Response<T>,
@@ -115,7 +115,7 @@ pub fn respond<
     let has_length = (*response.body()).has_length().is_some();
     stream.write_all(&b"\r\n"[..])?;
 
-    let mut body = response.body().clone();
+    let mut body = response.into_body();
     if has_length {
         std::io::copy(&mut body, &mut stream)?;
     } else {
