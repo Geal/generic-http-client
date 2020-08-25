@@ -120,7 +120,15 @@ pub fn respond<
         std::io::copy(&mut body, &mut stream)?;
     } else {
         loop {
-            let data = body.fill_buf()?;
+            let data = match body.fill_buf() {
+                Ok(data) => data,
+                Err(e) => {
+                    // flush the stream one last time if there's data in flight
+                    stream.flush()?;
+                    return Err(e.into());
+                }
+            };
+
             if data.len() == 0 {
                 //EOF
                 stream.write_all(&b"0\r\n\r\n"[..])?;
