@@ -268,6 +268,7 @@ impl<Stream: Read+Write+Debug> BufRead for Body<Stream> {
     }
 
     fn consume(&mut self, amt: usize) {
+        self.stream.consume(amt);
         self.length = match self.length {
             Length::None => Length::None,
             Length::ContentLength(sz) => {
@@ -280,9 +281,29 @@ impl<Stream: Read+Write+Debug> BufRead for Body<Stream> {
             Length::Chunked(sz) => {
                 if sz >= amt {
                     if sz == amt {
-                        if &self.stream.buffer()[..2] == &b"\r\n"[..] {
+                        if self.stream.buffer().is_empty() {
+                            if self.at_eof {
+                                return;
+                            }
+
+                            let data = match self.stream.fill_buf() {
+                                Ok(data) => data,
+                                Err(e) => {
+                                    error!("could not fill buffer: {:?}", e);
+                                    return;
+                                }
+                            };
+
+                            if data.is_empty() {
+                                self.at_eof = true;
+                                return;
+                            }
+                        }
+
+                        if self.stream.buffer().len() >= 2 && &self.stream.buffer()[..2] == &b"\r\n"[..] {
                             self.stream.consume(2);
                         } else {
+                            error!("could not parse chunk end");
                             //FIXME: we might need a call to fill_buf here
                             panic!("could not parse chunk end");
                         }
