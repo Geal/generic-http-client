@@ -1,6 +1,7 @@
 use crate::accumulator::AccReader;
 use std::fmt::Debug;
 use std::io::{self, BufRead, Read, Write};
+use log::{info, error};
 
 #[derive(Debug, Clone)]
 pub struct Body<Stream: Read + Write + Debug> {
@@ -188,7 +189,7 @@ impl<Stream: Read+Write+Debug> BufRead for Body<Stream> {
                     }
                 }
 
-                (Length::ContentLength(sz), Ok(&self.stream.buffer()[..sz]))
+                (Length::ContentLength(sz), &self.stream.buffer()[..sz])
             },
             Length::Chunked(mut sz) => {
                 // we need to parse a chunk header
@@ -241,21 +242,21 @@ impl<Stream: Read+Write+Debug> BufRead for Body<Stream> {
 
                 if self.stream.buffer().len() == 0 {
                     if self.at_eof {
-                        (Length::Chunked(sz), Ok(&b""[..]))
+                        (Length::Chunked(sz), &b""[..])
                     } else {
                         let data = self.stream.fill_buf()?;
 
                         if data.is_empty() {
                             self.at_eof = true;
-                            (Length::Chunked(sz), Ok(&b""[..]))
+                            (Length::Chunked(sz), &b""[..])
                         } else {
                             let min = std::cmp::min(sz, self.stream.buffer().len());
-                            (Length::Chunked(sz), Ok(&self.stream.buffer()[..min]))
+                            (Length::Chunked(sz), &self.stream.buffer()[..min])
                         }
                     }
                 } else {
                     let min = std::cmp::min(sz, self.stream.buffer().len());
-                    (Length::Chunked(sz), Ok(&self.stream.buffer()[..min]))
+                    (Length::Chunked(sz), &self.stream.buffer()[..min])
                 }
             }
 
@@ -263,7 +264,7 @@ impl<Stream: Read+Write+Debug> BufRead for Body<Stream> {
 
         self.length = length;
 
-        res
+        Ok(res)
     }
 
     fn consume(&mut self, amt: usize) {
