@@ -1,7 +1,7 @@
 use crate::accumulator::AccReader;
 use std::fmt::Debug;
 use std::io::{self, BufRead, Read, Write};
-use log::{info, error};
+use log::error;
 
 #[derive(Debug, Clone)]
 pub struct Body<Stream: Read + Write + Debug> {

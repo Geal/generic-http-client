@@ -265,6 +265,7 @@ mod tests {
     use super::*;
     use std::net::TcpStream;
     use std::net::ToSocketAddrs;
+    use log::error;
 
     struct TcpStreamResolver {}
 
@@ -277,7 +278,7 @@ mod tests {
             //println!("resolving hostname: {}", host);
             match host.to_socket_addrs() {
                 Err(e) => {
-                    //println!("ToSocketAddrs error: {:?}", e);
+                    error!("ToSocketAddrs error: {:?}", e);
                     Err(ResolverError::NotFound.into())
                 }
                 Ok(mut addr_iter) => match addr_iter.next() {
