@@ -109,7 +109,7 @@ pub fn respond<
     if let Some(sz) = response.body().has_length() {
         write!(&mut stream, "Content-Length: {}\r\n", sz)?;
     } else {
-        stream.write_all(&b"Transfer-Encoding: Chunked\r\n"[..])?;
+        stream.write_all(&b"Transfer-Encoding: chunked\r\n"[..])?;
     }
 
     let has_length = (*response.body()).has_length().is_some();
