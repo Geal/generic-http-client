@@ -120,24 +120,29 @@ pub fn respond<
         std::io::copy(&mut body, &mut stream)?;
     } else {
         loop {
-            let data = match body.fill_buf() {
-                Ok(data) => data,
+            let consumed = match body.fill_buf() {
                 Err(e) => {
                     // flush the stream one last time if there's data in flight
                     stream.flush()?;
                     return Err(e.into());
                 }
-            };
+                Ok(data) => {
+                    if data.len() == 0 {
+                        //EOF
+                        stream.write_all(&b"0\r\n\r\n"[..])?;
+                        break;
+                    } else {
+                        write!(&mut stream, "{:x?}\r\n", data.len())?;
+                        stream.write_all(data)?;
+                        stream.write_all(&b"\r\n"[..])?;
 
-            if data.len() == 0 {
-                //EOF
-                stream.write_all(&b"0\r\n\r\n"[..])?;
-                break;
-            } else {
-                write!(&mut stream, "{:x?}\r\n", data.len())?;
-                stream.write_all(data)?;
-                stream.write_all(&b"\r\n"[..])?;
-            }
+                        //return how many bytes were written from the body
+                        data.len()
+                    }
+                },
+            };
+            body.consume(consumed);
+
         }
     }
     stream.flush()?;
