@@ -93,7 +93,7 @@ pub fn respond<
 >(
     stream: Stream,
     response: http::Response<T>,
-) -> Result<Stream, HttpError> {
+) -> Result<(Stream, T), HttpError> {
     let mut stream = BufWriter::new(stream);
     //println!("sending response:\n{:?}", response);
 
@@ -148,5 +148,5 @@ pub fn respond<
         Err(_) => panic!(),
     };
 
-    Ok(stream)
+    Ok((stream, body))
 }
