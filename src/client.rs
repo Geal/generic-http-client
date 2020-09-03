@@ -42,6 +42,16 @@ impl<Stream: Read + Write, R: Resolver<Stream>> Client<Stream, R> {
         })
     }
 
+    pub fn new_with_stream(url: &str, stream: HttpStream<Stream>) -> Result<Self, HttpError> {
+        let url = url::Url::parse(url).map_err(HttpError::Url)?;
+
+        Ok(Client {
+            stream: Some(stream),
+            resolver: PhantomData,
+            url,
+        })
+    }
+
     pub fn get(url_str: &str) -> Result<http::Response<Body<HttpStream<Stream>>>, HttpError> {
         let mut client: Self = Client::new(&url_str)?;
         let mut req: http::Request<&'static [u8]> = http::Request::default();
